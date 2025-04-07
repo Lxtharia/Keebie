@@ -263,26 +263,26 @@ class macroDevice():
 
         jsonData = readJson(deviceJson, deviceDir) # Cache the data held in the device json file
         self.initialLayer = jsonData["initial_layer"] # Layer for the device the start on
-        self.eventFile = "/dev/input/" + jsonData["event"] # The input event file
-        self.udevTests = jsonData["udev_tests"] # Strings for udev matching
+        self.eventFile = jsonData["devFile"]    # The input event file that was symlinked by the udev rule
+        self.udevMatchKeys = jsonData["udev_match_keys"] # Strings for udev matching
 
         self.currentLayer = self.initialLayer # Layer this device is currently on
         self.ledger = keyLedger(self.name) # A keyLedger to track input events on his devicet
         self.ledger.ignored_keys = jsonData["ignored_keys"]
         self.device = None # will be an InputEvent instance
 
-    def addUdevRule(self, priority = 85):
+    def addUdevRule(self, current_event_file = "", priority = 85):
         """Generate a udev rule for this device."""
-        path = f"{priority}-keebie-{self.name}.rules" # Name of the file for the rule
-        rule = ""
+        filepath = f"{priority}-keebie-{self.name}.rules" # Name of the file for the rule
+        rule_string = ""
 
-        for test in self.udevTests: # For all the udev tests
-            rule += test + ", " # Add them together with commas
-            dprint(rule)
+        for test in self.udevMatchKeys: # For all the udev tests
+            rule_string += test + ", " # Add them together with commas
+            dprint(rule_string)
 
-        writeJson(self.name + ".json", {"udev_rule": path}, deviceDir) # Save the udev rule filepath for removeDevice()
+        writeJson(self.name + ".json", {"udev_rule": filepath}, deviceDir) # Save the udev rule filepath for removeDevice()
 
-        subprocess.run(["sudo", "sh", installDataDir + "/setup_tools/udevRule.sh", rule, path]) # Run the udev setup script with sudo
+        subprocess.run(["sudo", "sh", installDataDir + "/setup_tools/udevRule.sh", rule_string, self.eventFile, filepath, current_event_file]) # Run the udev setup script with sudo
         
         subprocess.run(["sudo", "udevadm", "test", "/sys/class/input/event3"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) # Force udev to parse the new rule for the device
 
@@ -974,6 +974,10 @@ def newDevice(eventPath = "/dev/input/"):
     """Add a new json file to devices/."""
     print("Setting up device")
 
+    deviceName = input("Please provide a name for this device.\nThis name will be used to create a symlink to the device in /dev/<devicename> so choose something unique.\nName: ").strip()
+    while deviceName == "":
+        deviceName = input("Name cannot be empty. Name: ").strip()
+
     initialLayer = input("Please provide a name for for this devices initial layer (non-existent layers will be created, default.json by default): ") # Prompt the user for a layer filename
 
     if initialLayer.strip() == "": # If the user did not provide a layer name
@@ -983,22 +987,27 @@ def newDevice(eventPath = "/dev/input/"):
         createLayer(initialLayer) # Create it
 
     eventFile = detectKeyboard(eventPath) # Prompt the user for a device
-    eventFile = os.path.basename(eventFile) # Get the devices filename from its filepath
+    # eventFile = os.path.basename(eventFile) # Get the devices filename from its filepath
 
     input("\nA udev rule will be made next, sudo may prompt you for a password. Press enter to continue...") # Ensure the stdin is empty
 
-    selectedPropertiesList = [f"KERNEL==\"{eventFile}\""] # Make an udev rule matching the device file
+    dev = InputDevice(eventFile)
+
+    selectedPropertiesList = [f'ATTRS(phys)=="{dev.phys}"'] # Make an udev rule matching the device file
+    symlink_name = "/dev/" + deviceName
+
+    # create udevrule
 
     deviceJsonDict = { # Construct the device data dict
         "initial_layer": initialLayer,
-        "event": eventFile,
-        "udev_tests": selectedPropertiesList,
+        "devFile": symlink_name,
+        "udev_match_keys": selectedPropertiesList,
         "ignored_keys": [],
     }
 
-    writeJson(eventFile + ".json", deviceJsonDict, deviceDir) # Write device data into a json file
+    writeJson(deviceName + ".json", deviceJsonDict, deviceDir) # Write device data into a json file
 
-    macroDevice(eventFile + ".json").addUdevRule() # Create a mcro device and make a udev rule, the user will be prompted for sudo
+    macroDevice(deviceName + ".json").addUdevRule(eventFile) # Create a mcro device and make a udev rule, the user will be prompted for sudo
 
     end()
 
