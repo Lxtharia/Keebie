@@ -80,6 +80,7 @@ class keyLedger():
         self.state = 3 # An int representing the state of the ledger; 0, 1, 2, 3 : rising, falling, holding, stale
         self.stateChangeStamp = time.time() # The timestamp of the last state change
         self.peaking = False # Are we peaking (adding new keys; rising or holding)
+        self.ignored_keys = []
         
         self.history = "" # Current history of recent key peaks
         self.histories = [] # List of flushed histories
@@ -183,22 +184,24 @@ class keyLedger():
                     event = categorize(event) # Convert our EV_KEY input event into a KeyEvent
                     keycode = event.keycode # Store the event's keycode
                     keystate = event.keystate # Store the event's key state
+                    if keycode not in self.ignored_keys:  # Ignore keycodes
+                        # dprint(timestamp)
 
-                    # dprint(timestamp)
+                        if type(keycode) == list: # If the keycode is a list of keycodes (it can happen) 
+                            keycode = keycode[0] # Select the first one
 
-                    if type(keycode) == list: # If the keycode is a list of keycodes (it can happen) 
-                        keycode = keycode[0] # Select the first one
+                        if keystate in (event.key_down, event.key_hold): # If the key is down
+                            if not keycode in self.downKeys: # If the key is not known to be down
+                                self.newKeys += [keycode, ] # Add the key to our new keys
 
-                    if keystate in (event.key_down, event.key_hold): # If the key is down
-                        if not keycode in self.downKeys: # If the key is not known to be down
-                            self.newKeys += [keycode, ] # Add the key to our new keys
+                        elif keystate == event.key_up: # If the key was released
+                            if keycode in self.downKeys: # If the key was in our down keys
+                                self.lostKeys += [keycode, ] # Add the key to our lost keys
 
-                    elif keystate == event.key_up: # If the key was released
-                        if keycode in self.downKeys: # If the key was in our down keys
-                            self.lostKeys += [keycode, ] # Add the key to our lost keys
-
-                        else: # If the key was not known to be down
-                            print(f"{self.name}) Untracked key {keycode} released.") # Print a warning
+                            else: # If the key was not known to be down
+                                print(f"{self.name}) Untracked key {keycode} released.") # Print a warning
+                    else:
+                        print(f"{self.name}) (Ignoring key {keycode})") # Print a warning
 
             if not self.newKeys == []: # if we have new keys (rising edge)
                 # dprint()
@@ -265,6 +268,7 @@ class macroDevice():
 
         self.currentLayer = self.initialLayer # Layer this device is currently on
         self.ledger = keyLedger(self.name) # A keyLedger to track input events on his devicet
+        self.ledger.ignored_keys = jsonData["ignored_keys"]
         self.device = None # will be an InputEvent instance
 
     def addUdevRule(self, priority = 85):
@@ -989,6 +993,7 @@ def newDevice(eventPath = "/dev/input/"):
         "initial_layer": initialLayer,
         "event": eventFile,
         "udev_tests": selectedPropertiesList,
+        "ignored_keys": [],
     }
 
     writeJson(eventFile + ".json", deviceJsonDict, deviceDir) # Write device data into a json file
