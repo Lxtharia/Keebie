@@ -201,7 +201,7 @@ class keyLedger():
                             else: # If the key was not known to be down
                                 print(f"{self.name}) Untracked key {keycode} released.") # Print a warning
                     else:
-                        print(f"{self.name}) (Ignoring key {keycode})") # Print a warning
+                        dprint(f"{self.name}) (Ignoring key {keycode})") # Print a warning
 
             if not self.newKeys == []: # if we have new keys (rising edge)
                 # dprint()
@@ -373,7 +373,7 @@ class macroDevice():
 
                 self.setLeds() # Set LEDs based on the new current layer
 
-            else:
+            elif value.strip() != "":
                 if value.strip().endswith("&") == False and settings["forceBackground"]: # If value is not set in run in the background and our settings say to force running in the background
                     value += " &" # Force running in the background
                     
