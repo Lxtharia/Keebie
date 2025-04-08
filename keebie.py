@@ -993,7 +993,7 @@ def newDevice(eventPath = "/dev/input/"):
 
     dev = InputDevice(eventFile)
 
-    selectedPropertiesList = [f'ATTRS(phys)=="{dev.phys}"'] # Make an udev rule matching the device file
+    selectedPropertiesList = [f'ATTRS{{phys}}=="{dev.phys}"'] # Make an udev rule matching the device file
     symlink_name = "/dev/" + deviceName
 
     # create udevrule

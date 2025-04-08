@@ -2,6 +2,7 @@ SHELL=/bin/bash
 
 bin_path="/usr/bin/keebie"
 install_path="/usr/share/keebie/"
+service_path="${HOME}/.config/systemd/user/keebie.service"
 
 pkg_type="tar"
 
@@ -62,6 +63,8 @@ install:
 	sudo cp -rv -t $(install_path)/data/ ./layers/ ./settings.json ./devices/ ./scripts/
 	sudo cp -rv -t $(install_path)/ ./setup_tools/
 
+	cp ./setup_tools/keebie.service "$(service_path)"
+
 	# sudo ./packaging/postinst
 	
 	@echo "keebie has been installed, please ensure you have the following packages:"
@@ -71,4 +74,5 @@ install:
 remove:
 	# sudo ./packaging/prerm
 	sudo rm -rfv $(bin_path) $(install_path)
+	rm "$(service_path)"
 	# sudo ./packaging/postrm
