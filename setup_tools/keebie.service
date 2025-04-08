@@ -1,9 +1,11 @@
 [Unit]
 Description=Keebie service 
+
 [Service]
 Type=simple
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/$USER/.Xauthority
-ExecStart=/usr/bin/python3 <locaion of keebie.py>
+ExecStart=/usr/bin/keebie
+
 [Install]
 WantedBy=multi-user.target

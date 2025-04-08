@@ -25,7 +25,7 @@ udev_rule_file="$3"
 touch /etc/udev/rules.d/"$3"
 cd /etc/udev/rules.d/
 
-printf 'SUBSYSTEM=="input", %s MODE="0666", ENV{SYSTEMD_WANTS}="keebie.service"  TAG+="systemd" SYMLINK+="%s"' "$rule_string" "$symlink_file" > "$udev_rule_file"
+printf 'SUBSYSTEM=="input", %s MODE="0666", ENV{SYSTEMD_USER_WANTS}="keebie.service"  TAG+="systemd" SYMLINK+="%s"' "$rule_string" "$symlink_file" > "$udev_rule_file"
 
 if [[ "$4" != "" ]]; then
     echo "Creating symlink for current session. Udev should create the symlink automatically on reboot"
